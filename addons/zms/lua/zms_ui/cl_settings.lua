@@ -1,0 +1,13 @@
+hook.Add("AddToolMenuCategories", "ZMS.Category", function() spawnmenu.AddToolCategory("Utilities", "ZMS", "ZONT's Metrostroi Addons") end)
+
+hook.Add("PopulateToolMenu", "ZMS.Utilities", function()
+    spawnmenu.AddToolMenuOption("Utilities", "ZMS", "ZMS.HudSettings", "#zms.settings.hud", "", "", function(panel)
+        panel:ClearControls()
+        panel:SetPadding(0)
+        panel:SetSpacing(0)
+        panel:Dock(FILL)
+        panel:CheckBox("#zms.settings.zms_hud_passengers", "zms_hud_passengers")
+        panel:CheckBox("#zms.settings.zms_hud_distance", "zms_hud_distance")
+        panel:CheckBox("#zms.settings.zms_hud_distance_score", "zms_hud_distance_score")
+    end)
+end)
