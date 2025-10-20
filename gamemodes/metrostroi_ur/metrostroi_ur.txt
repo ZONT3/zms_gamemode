@@ -5,6 +5,7 @@
 	"category"	"other"
 	"maps"		"^gm_|^gmod_"
 	"menusystem"	"1"
+	"workshopid"	"3590738674"
 
 	"settings"
 	{
