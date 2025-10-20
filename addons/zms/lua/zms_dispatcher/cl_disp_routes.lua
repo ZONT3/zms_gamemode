@@ -111,7 +111,7 @@ function ZMS.OpenDispRoutesMenu(tbl, is_dispatcher)
 end
 
 concommand.Add("zms_disp_routes", function()
-    local permission = ULib.ucl.query(LocalPlayer(), "droute_menu")
+    local permission = ULib.ucl.query(LocalPlayer(), "zms_droute_menu")
     ZMS.OpenDispRoutesMenu(ZMS.DispRoutesTbl or {}, permission or not MDispatcher or MDispatcher.Dispatcher == LocalPlayer():Nick())
 end)
 

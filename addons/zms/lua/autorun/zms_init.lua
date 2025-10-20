@@ -28,12 +28,22 @@ cl("zms_base/cl_trains.lua")
 --[[ UI Features ]]
 cl("zms_ui/cl_utils.lua")
 cl("zms_ui/cl_hud.lua")
+cl("zms_ui/cl_pings.lua")
 
---[[ GUIDES ]]
+--[[ Guides ]]
 sh("zms_guides/sh_init.lua")
 sh("zms_guides_repo/sh_repo.lua")
 cl("zms_guides/cl_guide_menu.lua")
 
+--[[ Dispatcher Utils ]]
+cl("zms_dispatcher/cl_disp_routes.lua")
+cl("zms_dispatcher/cl_asnp.lua")
+
+--[[ ATZ ]]
+cl("zms_atz/cl_atz_menu.lua")
+
+--[[ Immersive Radio ]]
+cl("zms_radio/cl_radio.lua")
 
 --[[
     SV files
@@ -52,9 +62,24 @@ local function init()
     --[[ UI Features ]]
     sv("zms_ui/sv_passengers.lua")
     sv("zms_ui/sv_station_distance.lua")
+    sv("zms_ui/sv_pings.lua")
 
     --[[ GUIDES ]]
     sv("zms_guides/sv_init.lua")
+
+    --[[ DISPATCHER UTILS ]]
+    sv("zms_dispatcher/sv_disp_routes.lua")
+    sv("zms_dispatcher/sv_asnp.lua")
+
+    --[[ ATZ ]]
+    sv("zms_atz/sv_atz.lua")
+    sv("zms_atz/sv_atz_cases.lua")
+
+    --[[ Immersive Radio ]]
+    sv("zms_radio/sv_radio.lua")
+
+    --[[ Misc ]]
+    sv("zms_misc/sv_udochka_kills.lua")
 end
 
 

@@ -1,2 +1,2 @@
 include("shared.lua")
-print("Metrostroi Unranked CL")
+print("Metrostroi Gamemode CL")

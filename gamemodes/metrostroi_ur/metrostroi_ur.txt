@@ -1,7 +1,7 @@
 "metrostroi_ur"
 {
 	"base"		"sandbox"
-	"title"		"Metrostroi Unranked"
+	"title"		"Metrostroi"
 	"category"	"other"
 	"maps"		"^gm_|^gmod_"
 	"menusystem"	"1"

@@ -183,7 +183,7 @@ end)
 
 timer.Simple(10, function()
     timer.Create("ZMS.DispAsnp.UpdateClient", 5, 0, function()
-        local permission = ULib.ucl.query(LocalPlayer(), "droute_menu")
+        local permission = ULib.ucl.query(LocalPlayer(), "zms_droute_menu")
         if not ZMS.ASNP.HudEnabled or not (permission or not MDispatcher or MDispatcher.Dispatcher == LocalPlayer():Nick()) then
             if IsValid(ZMS.ASNP.HudPanel) then
                 ZMS.ASNP.HudPanel:Remove()

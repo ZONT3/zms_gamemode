@@ -2,4 +2,4 @@ AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
-print("Metrostroi Unranked SV")
+print("Metrostroi Gamemode SV")

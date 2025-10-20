@@ -54,7 +54,7 @@ function ZMS.GetAllowedWagons(ply)
     local min_wagons = GetConVar("metrostroi_advanced_minwagons"):GetInt()
     local cur_wagons = GetGlobalInt("metrostroi_train_count")
     local avail_wagons = max_wagons - cur_wagons
-    local unranked_player = not PlayerPermission(ply, "remove_ur_restrictions")
+    local unranked_player = not PlayerPermission(ply, "zms_restrictions_remove_ur")
 
     -- Base maximum
     local restriction_type = 0
