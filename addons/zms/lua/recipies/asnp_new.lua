@@ -34,23 +34,30 @@ function RECIPE:Inject(ent)
                 end
                 if not slave_found then return end
                 wagon.SyncAsnpAt = nil
-                wagon.ASNP:UpdateBoards()
-                wagon.ASNP:SyncASNP()
+                if isfunction(wagon.ASNP.UpdateBoards) and isfunction(wagon.ASNP.SyncASNP) then
+                    wagon.ASNP:UpdateBoards()
+                    wagon.ASNP:SyncASNP()
+                end
             end
             return
         end
-        if wagon:GetNW2Int("ZMS.ASNP.Firmware", 1) ~= 2 then return end
+
+        local firmware_type = wagon:GetNW2Int("ZMS.ASNP.Firmware", 1)
+        if firmware_type < 2 then return end
 
         wagon.ASNP_OLD = wagon.ASNP
+        wagon.ASNP = nil
         wagon.Systems.ASNP = nil
-        wagon:LoadSystem("ASNP", "81_71_ASNP_ZMS")
+        wagon:LoadSystem("ASNP", firmware_type == 3 and "81_71_ASNP_ZMS" or "81_71_ASNP_OLD")
 
         if CLIENT and not istable(wagon.ASNP_OLD) then
             wagon.ASNP = wagon.ASNP_OLD
         end
 
         if SERVER then
-            wagon.ASNP:Trigger("R_ASNPPath", false)
+            if firmware_type == 3 then
+                wagon.ASNP:Trigger("R_ASNPPath", false)
+            end
             wagon.SyncAsnpAt = CurTime() + 2.5
         end
     end, -1)
@@ -64,8 +71,8 @@ function RECIPE:InjectSpawner(ent)
         "ZMS.ASNP.Firmware",
         "Прошивка АСНП",
         "List",
-        {"Старая", "Новая"},
-        2
+        {"Без изменений", "Старая", "Новая"},
+        3
     })
 end
 
