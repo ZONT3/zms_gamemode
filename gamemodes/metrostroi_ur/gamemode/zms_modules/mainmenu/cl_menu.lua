@@ -8,7 +8,7 @@ local margin = 16
 local size_footer_h = 86
 local size_menu_w = 480
 
-local motd_html = nil
+local html_pages_cache = {}
 local motd_shown = false
 
 local footer_html = [[
@@ -103,8 +103,10 @@ local function resolve_html_variables(html_str)
     end)
 end
 
-local function request_motd()
-    net.Start("ZMS.PauseMenu.RequestMotd")
+local function request_page(identifier)
+    if not isstring(identifier) then return end
+    net.Start("ZMS.PauseMenu.RequestPage")
+        net.WriteString(identifier)
     net.SendToServer()
 end
 
@@ -121,36 +123,31 @@ end
 function PANEL:InitUnsafe()
     self:SetSize(ScrW(), ScrH())
 
-    self.about = self:Add("DPanel")
-    self.about.pause_menu = self
-    self.about.Paint = function() end
-    self.about.PerformLayout = function(this, w, h)
+    self.page = self:Add("DPanel")
+    self.page.pause_menu = self
+    self.page.Paint = function() end
+    self.page.PerformLayout = function(this, w, h)
         if this.shown_panel then
             this.shown_panel:SetSize(w, h)
             this.shown_panel:SetPos(0, 0)
         end
     end
 
-    local function prepare_html(html_pnl, html_string)
+    local function prepare_html(html_pnl, html_identifier, local_html)
         function html_pnl:OnDocumentReady()
             self:AddFunction("gmod", "openUrl", gui.OpenURL)
         end
+        local html_string = local_html or not GetGlobalBool("ZMS.Debug", false) and html_identifier and html_pages_cache[html_identifier] or nil
         if html_string then
             html_pnl:SetHTML(resolve_html_variables(html_string))
+        else
+            html_pnl.html_identifier = html_identifier
+            request_page(html_identifier)
         end
     end
 
-    self.motd = self:Add("DHTML")
-    prepare_html(self.motd)
-
-    if motd_html then
-        self.motd:SetHTML(motd_html)
-    else
-        request_motd()
-    end
-
     self.footer = self:Add("DHTML")
-    prepare_html(self.footer, footer_html)
+    prepare_html(self.footer, nil, footer_html)
 
     self.menu = self:Add("DScrollPanel")
     self.menu.pause_menu = self
@@ -167,15 +164,14 @@ function PANEL:InitUnsafe()
     end
 
     self.menu_tabs = {}
-    self.menu_tabs[1] = { "О сервере (MOTD)", nil }
-    self.tab_shown = not motd_shown and 1 or 0
-    if not motd_shown then motd_shown = true end
-
     hook.Run("ZMS.PauseMenu.InitTabs", self, prepare_html)
 
     function self.menu:AddTabsButtons()
         local pause_menu = self.pause_menu
         local menu_tabs = pause_menu.menu_tabs
+        table.sort(menu_tabs, function(a, b)
+            return not b[3] or a[3] and a[3] > b[3] or false
+        end)
         self.tab_buttons = {}
 
         local function update_all()
@@ -194,58 +190,48 @@ function PANEL:InitUnsafe()
             button:SetText(title)
             button.pause_menu = self.pause_menu
 
-            if idx == 1 then
-                button.DoClick = function(this)
-                    this.pause_menu.tab_shown = 1
-                    this.pause_menu:ResetShownPanel(false)
-                    update_all()
-                end
-            else
-                button.DoClick = function(this)
-                    this.pause_menu:ResetShownPanel(true)
-                    this.pause_menu.about.shown_panel = factory(this.pause_menu.about)
-                    this.pause_menu.about:InvalidateLayout()
-                    this.pause_menu.tab_shown = idx
-                    update_all()
-                end
+            button.DoClick = function(this)
+                this.pause_menu:SetPage(idx)
+                this.pause_menu.page.shown_panel = factory(this.pause_menu.page)
+                this.pause_menu.page:InvalidateLayout()
+                update_all()
             end
             button.UpdateEnabled = function(this)
-                local shown = this.pause_menu.tab_shown
-                if not this.pause_menu:IsSmallVersion() and shown == 0 then shown = 1 end
-                this:SetEnabled(shown ~= idx)
+                this:SetEnabled(this.pause_menu.tab_shown ~= idx)
             end
             button:UpdateEnabled()
 
             self.tab_buttons[idx] = button
         end
+
+        if pause_menu.tab_shown > 0 then
+            local btn = self.tab_buttons[pause_menu.tab_shown]
+            btn:DoClick()
+        end
     end
 
-    self:ResetShownPanel(false)
+    self:SetPage(not motd_shown and 1 or 0)
+    if not motd_shown then motd_shown = true end
+
     self.shown_at = SysTime()
     self:MakePopup(true)
 
     hook.Run("ZMS.PauseMenu.InitMenu", self.menu)
 end
 
-function PANEL:ResetShownPanel(about_visible)
-    if self.about.shown_panel then
-        if isfunction(self.about.shown_panel.Remove) then
-            self.about.shown_panel:Remove()
+function PANEL:SetPage(page)
+    if self.page.shown_panel then
+        if isfunction(self.page.shown_panel.Remove) then
+            self.page.shown_panel:Remove()
         end
-        self.about.shown_panel = nil
+        self.page.shown_panel = nil
     end
-    self.about:SetVisible(about_visible)
-    if not about_visible then
-        self.motd:SetVisible(self.tab_shown == 1 or self.tab_shown == 0 and not self:IsSmallVersion())
-        self.menu:SetVisible(self.tab_shown == 0 or not self:IsSmallVersion())
-    else
-        self.motd:SetVisible(false)
-        self.menu:SetVisible(not self:IsSmallVersion())
-    end
+    self.tab_shown = page == 0 and not self:IsSmallVersion() and 1 or page
+    self.menu:SetVisible(self.tab_shown == 0 or not self:IsSmallVersion())
 end
 
-function PANEL:AddMenuTab(title, factory)
-    table.insert(self.menu_tabs, {title, factory})
+function PANEL:AddMenuTab(title, factory, priority)
+    table.insert(self.menu_tabs, {title, factory, priority})
 end
 
 function PANEL:IsSmallVersion()
@@ -255,8 +241,7 @@ end
 function PANEL:OnScreenSizeChanged(_, _, w, h)
     self:SetSize(w, h)
     self:InvalidateLayout()
-    self.tab_shown = 0
-    self:ResetShownPanel(false)
+    self:SetPage(0)
 end
 
 function PANEL:PerformLayout(w, h)
@@ -269,10 +254,8 @@ function PANEL:PerformLayout(w, h)
     local motd_h = menu_h
     local motd_x = not small_version and (margin * 2 + menu_w) or margin
 
-    self.motd:SetPos(motd_x, margin)
-    self.motd:SetSize(motd_w, motd_h)
-    self.about:SetPos(motd_x, margin)
-    self.about:SetSize(motd_w, motd_h)
+    self.page:SetPos(motd_x, margin)
+    self.page:SetSize(motd_w, motd_h)
     self.menu:SetPos(margin, margin)
     self.menu:SetSize(menu_w, menu_h)
     self.footer:SetPos(0, footer_y)
@@ -314,19 +297,19 @@ vgui.Register("ZMS.PauseMenu.Button", BUTTON, "DButton")
 ZMS = ZMS or {}
 
 function ZMS.ClosePauseMenu()
-    if isfunction(ZMS.PauseMenu.Remove) then
-        ZMS.PauseMenu:Remove()
+    if isfunction(ZMS.PauseMenuPanel.Remove) then
+        ZMS.PauseMenuPanel:Remove()
     end
-    ZMS.PauseMenu = nil
+    ZMS.PauseMenuPanel = nil
 end
 
 function ZMS.OpenPauseMenu()
-    if ZMS.PauseMenu then ZMS.ClosePauseMenu() end
-    ZMS.PauseMenu = vgui.Create("ZMS.PauseMenu")
+    if ZMS.PauseMenuPanel then ZMS.ClosePauseMenu() end
+    ZMS.PauseMenuPanel = vgui.Create("ZMS.PauseMenu")
 end
 
 function ZMS.TogglePauseMenu()
-    if IsValid(ZMS.PauseMenu) then
+    if IsValid(ZMS.PauseMenuPanel) then
         ZMS.ClosePauseMenu()
     else
         ZMS.OpenPauseMenu()
@@ -338,10 +321,10 @@ hook.Add("OnPauseMenuShow", "ZMS.PauseMenuInterception", function()
     return false
 end)
 
-net.Receive("ZMS.PauseMenu.RecvMotd", function()
+net.Receive("ZMS.PauseMenu.RecvPage", function()
     local ln = net.ReadUInt(32)
-    motd_html = util.Decompress(net.ReadData(ln))
-    motd_html = resolve_html_variables(motd_html)
+    local html_string = util.Decompress(net.ReadData(ln))
+    html_string = resolve_html_variables(html_string)
 
     local r, g, b = ColorFromStr(net.ReadString())
     color_background = Color(r, g, b, 60)
@@ -349,13 +332,18 @@ net.Receive("ZMS.PauseMenu.RecvMotd", function()
     ln = net.ReadUInt(32)
     html_variables = util.JSONToTable(util.Decompress(net.ReadData(ln)))
 
-    if ZMS.PauseMenu and ZMS.PauseMenu.motd then
-        ZMS.PauseMenu.motd:SetHTML(motd_html)
-        ZMS.PauseMenu.footer:SetHTML(resolve_html_variables(footer_html))
-    end
-
-    if GetGlobalBool("ZMS.Debug", false) then
-        motd_html = nil
+    local menu_panel = ZMS.PauseMenuPanel
+    if menu_panel and menu_panel.page and menu_panel.footer then
+        if menu_panel.page.shown_panel and menu_panel.page.shown_panel.html_identifier then
+            menu_panel.page.shown_panel:SetHTML(html_string)
+            if not GetGlobalBool("ZMS.Debug", false) then
+                html_pages_cache[menu_panel.page.shown_panel.html_identifier] = html_string
+            end
+        end
+        if not menu_panel.footer.was_set then
+            menu_panel.footer:SetHTML(resolve_html_variables(footer_html))
+            menu_panel.footer.was_set = true
+        end
     end
 end)
 
@@ -364,5 +352,5 @@ function ulx.showMotdMenu()
     ZMS.OpenPauseMenu()
 end
 
--- timer.Simple(1, request_motd)
-concommand.Add("zms_motd_update", request_motd)
+-- timer.Simple(1, request_page)
+-- concommand.Add("zms_motd_update", request_page)

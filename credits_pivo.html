@@ -1,5 +1,5 @@
-local html_str = [[
 <html>
+    <!-- This is an example of Credits from PIVO server -->
     <head>
         <style>
             *::-webkit-scrollbar {
@@ -76,12 +76,3 @@ local html_str = [[
         {{server_addons}}
     </body>
 </html>
-]]
-
-hook.Add("ZMS.PauseMenu.InitTabs", "ZMS.PauseMenu.InitTabs.Credits", function(menu_panel, prepare_html)
-    menu_panel:AddMenuTab("Разработчики", function(root)
-        local pnl = root:Add("DHTML")
-        prepare_html(pnl, html_str)
-        return pnl
-    end)
-end)

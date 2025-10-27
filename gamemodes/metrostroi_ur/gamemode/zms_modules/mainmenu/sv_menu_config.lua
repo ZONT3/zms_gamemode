@@ -1,24 +1,18 @@
-local motd_html_default = [[
-<html>
-    <head>
-        <style>
-            body {
-                padding: 0;
-                margin: 0;
-                height: 100%;
-                color: #fff;
-                background-color: transparent;
-            }
-        </style>
-    </head>
-    <body>
-        Lorem ipsum PIVO
-    </body>
-</html>
-]]
+util.AddNetworkString("ZMS.PauseMenu.RecvPage")
+util.AddNetworkString("ZMS.PauseMenu.RequestPage")
 
-util.AddNetworkString("ZMS.PauseMenu.RecvMotd")
-util.AddNetworkString("ZMS.PauseMenu.RequestMotd")
+
+ZMS = ZMS or {}
+ZMS.PauseMenu = ZMS.PauseMenu or {}
+
+ZMS.PauseMenu.HtmlDefaults = {}
+ZMS.PauseMenu.HtmlCompressed = {}
+ZMS.PauseMenu.HtmlCompressedDurations = {}
+
+function ZMS.PauseMenu.SvRegisterHtmlTab(identifier, default_html)
+    ZMS.PauseMenu.HtmlDefaults[identifier] = default_html
+end
+
 
 local function escape(str)
     return str:gsub("<", "&lt;"):gsub(">", "&gt;")
@@ -80,45 +74,65 @@ end
 local server_addons = generate_addons()
 
 local html_variables = nil
-local motd_compressed = nil
-local motd_compressed_duration = nil
 local bgcol = nil
-net.Receive("ZMS.PauseMenu.RequestMotd", function(_, ply)
-    local cb = function(motd_html)
-        if not html_variables or not motd_compressed or not motd_compressed_duration or CurTime() > motd_compressed_duration then
-            local cfg = ZMS.GetServerConfig()
-            html_variables = {
-                server_name = escape(GetHostName()),
-                server_credit_footer = generate_credit(cfg),
-                server_dev_team = generate_server_dev_team(cfg),
-                server_links = generate_links(cfg),
-                server_addons = server_addons,
-            }
-            html_variables = util.Compress(util.TableToJSON(html_variables))
 
-            motd_compressed = util.Compress(motd_html)
-            motd_compressed_duration = CurTime() + (zms_cv_debug:GetBool() and 1 or 180)
+local function update_html_vars(arguments)
+    if not html_variables then
+        local cfg = ZMS.GetServerConfig()
+        html_variables = {
+            server_name = escape(GetHostName()),
+            server_credit_footer = generate_credit(cfg),
+            server_dev_team = generate_server_dev_team(cfg),
+            server_links = generate_links(cfg),
+            server_addons = server_addons,
+        }
+        html_variables = util.Compress(util.TableToJSON(html_variables))
+        bgcol = cfg.menu_bgcolor
+    end
+end
 
-            bgcol = cfg.menu_bgcolor
+net.Receive("ZMS.PauseMenu.RequestPage", function(_, ply)
+    local identifier = net.ReadString()
+
+    local html_default = ZMS.PauseMenu.HtmlDefaults[identifier]
+    if not html_default then
+        zms_err("PauseMenu", "Unknown identifier", identifier)
+        return
+    end
+
+    local cb = function(html_str)
+        update_html_vars()
+
+        local html_compressed = ZMS.PauseMenu.HtmlCompressed[identifier]
+        local html_compressed_duration = ZMS.PauseMenu.HtmlCompressedDurations[identifier]
+
+        if not html_compressed or not html_compressed_duration or CurTime() > html_compressed_duration then
+            html_compressed = util.Compress(html_str)
+            ZMS.PauseMenu.HtmlCompressed[identifier] = html_compressed
+            ZMS.PauseMenu.HtmlCompressedDurations[identifier] = CurTime() + (zms_cv_debug:GetBool() and 1 or 180)
         end
 
-        net.Start("ZMS.PauseMenu.RecvMotd")
-            net.WriteUInt(#motd_compressed, 32)
-            net.WriteData(motd_compressed)
+        net.Start("ZMS.PauseMenu.RecvPage")
+            net.WriteUInt(#html_compressed, 32)
+            net.WriteData(html_compressed)
             net.WriteString(bgcol or "#d800cd")
             net.WriteUInt(#html_variables, 32)
             net.WriteData(html_variables)
         net.Send(ply)
     end
 
-    if not file.Exists("zms_motd.txt", "DATA") then
-        file.Write("zms_motd.txt", motd_html_default)
-        cb(motd_html_default)
+    local fname = string.format("zms_motd/%s.txt", identifier)
+    if not file.Exists("zms_motd", "DATA") then
+        file.CreateDir("zms_motd")
+    end
+    if not file.Exists(fname, "DATA") then
+        file.Write(fname, html_default)
+        cb(html_default)
     else
-        file.AsyncRead("zms_motd.txt", "DATA", function(_, _, status, data)
+        file.AsyncRead(fname, "DATA", function(_, _, status, data)
             if status < 0 then
                 zms_err("MUR.PauseMenu", "Failed to read motd file, status", status)
-                cb(motd_html_default)
+                cb(html_default)
             elseif status == FSASYNC_OK then
                 cb(data)
             end
