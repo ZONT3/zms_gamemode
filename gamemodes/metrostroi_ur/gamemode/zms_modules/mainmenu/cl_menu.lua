@@ -1,0 +1,368 @@
+local color_background = Color(216, 0, 205, 60)
+local color_button_normal = Color(220, 220, 220)
+local color_button_disabled = Color(220, 220, 220, 100)
+local color_button_hover = Color(247, 230, 0)
+local color_button_click = Color(247, 49, 0)
+
+local margin = 16
+local size_footer_h = 86
+local size_menu_w = 480
+
+local motd_html = nil
+local motd_shown = false
+
+local footer_html = [[
+<html>
+    <head>
+        <style>
+            body {
+                padding: 0 16px 0 16px;
+                margin: 0;
+                color: #fff;
+                background-color: #0003;
+                font-family: Roboto,system-ui,Avenir,Helvetica,Arial,sans-serif;
+
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                max-width: 100vw;
+                max-height: 100vh;
+                overflow: hidden;
+            }
+            a {
+                color: #fffb00;
+                text-decoration-line: none;
+            }
+            a:hover {
+                color: #ffbb00;
+                text-decoration-line: underline;
+            }
+            code, .code {
+                color: #fff;
+                background-color: #0005;
+                border: 1px solid #fff3;
+                border-radius: 6px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 12pt;
+                padding: 2px 4px 2px 4px;
+                text-decoration-line: none;
+            }
+            .code:hover {
+                background-color: #1b15;
+            }
+            .container {
+                display: flex;
+                flex-direction: column;
+                align-items: left;
+                justify-content: center;
+                gap: 4px;
+            }
+            .container.horizontal {
+                flex-direction: row;
+                justify-content: flex-end;
+                gap: 16px;
+            }
+            .link, .link img {
+                display: block;
+                opacity: 0.5;
+                width: 64px;
+                height: 64px;
+                cursor: pointer;
+            }
+            .link:hover {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            {{server_credit_footer}}
+            <span><a href="#" onclick="gmod.openUrl('https://steamcommunity.com/sharedfiles/filedetails/?id=3590738674')" class="code">metrostroi_ur</a> gamemode by <a href="#" onclick="gmod.openUrl('https:/\/steamcommunity.com/id/ZONT3/')">ZONT_</a></span>
+            <span><a href="#" onclick="gmod.openUrl('https://steamcommunity.com/sharedfiles/filedetails/?id=261801217')" class="code">Metrostroi Subway Simulator</a> by Metrostroi Team & FoxWorks Aerospace s.r.o.</span>
+        </div>
+        <div class="container horizontal">
+            {{server_links}}
+        </div>
+    </body>
+</html>
+]]
+
+
+local function escape(str)
+    return str:gsub("<", "&lt;"):gsub(">", "&gt;")
+end
+
+local html_variables = {
+    server_name = escape(GetHostName()),
+}
+
+local function resolve_html_variables(html_str)
+    return string.gsub(html_str, "{{(.-)}}", function(k)
+        return html_variables[k] or ""
+    end)
+end
+
+local function request_motd()
+    net.Start("ZMS.PauseMenu.RequestMotd")
+    net.SendToServer()
+end
+
+
+local PANEL = {}
+
+function PANEL:Init()
+    local succ, err = pcall(self.InitUnsafe, self)
+    if not succ then
+        ErrorNoHalt("Error at init PauseMenu", err)
+    end
+end
+
+function PANEL:InitUnsafe()
+    self:SetSize(ScrW(), ScrH())
+
+    self.about = self:Add("DPanel")
+    self.about.pause_menu = self
+    self.about.Paint = function() end
+    self.about.PerformLayout = function(this, w, h)
+        if this.shown_panel then
+            this.shown_panel:SetSize(w, h)
+            this.shown_panel:SetPos(0, 0)
+        end
+    end
+
+    local function prepare_html(html_pnl, html_string)
+        function html_pnl:OnDocumentReady()
+            self:AddFunction("gmod", "openUrl", gui.OpenURL)
+        end
+        if html_string then
+            html_pnl:SetHTML(resolve_html_variables(html_string))
+        end
+    end
+
+    self.motd = self:Add("DHTML")
+    prepare_html(self.motd)
+
+    if motd_html then
+        self.motd:SetHTML(motd_html)
+    else
+        request_motd()
+    end
+
+    self.footer = self:Add("DHTML")
+    prepare_html(self.footer, footer_html)
+
+    self.menu = self:Add("DScrollPanel")
+    self.menu.pause_menu = self
+
+    function self.menu:SetupElement(element)
+        element:Dock(TOP)
+        element:DockMargin(0, 0, 0, 5)
+    end
+
+    function self.menu:AddButton()
+        local btn = self:Add("ZMS.PauseMenu.Button")
+        self:SetupElement(btn)
+        return btn
+    end
+
+    self.menu_tabs = {}
+    self.menu_tabs[1] = { "О сервере (MOTD)", nil }
+    self.tab_shown = not motd_shown and 1 or 0
+    if not motd_shown then motd_shown = true end
+
+    hook.Run("ZMS.PauseMenu.InitTabs", self, prepare_html)
+
+    function self.menu:AddTabsButtons()
+        local pause_menu = self.pause_menu
+        local menu_tabs = pause_menu.menu_tabs
+        self.tab_buttons = {}
+
+        local function update_all()
+            for _, btn in ipairs(self.tab_buttons) do
+                if isfunction(btn.UpdateEnabled) then
+                    btn:UpdateEnabled()
+                end
+            end
+        end
+
+        for idx, cfg in ipairs(menu_tabs) do
+            local button = self:AddButton()
+            local title, factory = unpack(cfg)
+            if not isstring(title) or not (idx == 1 or isfunction(factory)) then continue end
+
+            button:SetText(title)
+            button.pause_menu = self.pause_menu
+
+            if idx == 1 then
+                button.DoClick = function(this)
+                    this.pause_menu.tab_shown = 1
+                    this.pause_menu:ResetShownPanel(false)
+                    update_all()
+                end
+            else
+                button.DoClick = function(this)
+                    this.pause_menu:ResetShownPanel(true)
+                    this.pause_menu.about.shown_panel = factory(this.pause_menu.about)
+                    this.pause_menu.about:InvalidateLayout()
+                    this.pause_menu.tab_shown = idx
+                    update_all()
+                end
+            end
+            button.UpdateEnabled = function(this)
+                local shown = this.pause_menu.tab_shown
+                if not this.pause_menu:IsSmallVersion() and shown == 0 then shown = 1 end
+                this:SetEnabled(shown ~= idx)
+            end
+            button:UpdateEnabled()
+
+            self.tab_buttons[idx] = button
+        end
+    end
+
+    self:ResetShownPanel(false)
+    self.shown_at = SysTime()
+    self:MakePopup(true)
+
+    hook.Run("ZMS.PauseMenu.InitMenu", self.menu)
+end
+
+function PANEL:ResetShownPanel(about_visible)
+    if self.about.shown_panel then
+        if isfunction(self.about.shown_panel.Remove) then
+            self.about.shown_panel:Remove()
+        end
+        self.about.shown_panel = nil
+    end
+    self.about:SetVisible(about_visible)
+    if not about_visible then
+        self.motd:SetVisible(self.tab_shown == 1 or self.tab_shown == 0 and not self:IsSmallVersion())
+        self.menu:SetVisible(self.tab_shown == 0 or not self:IsSmallVersion())
+    else
+        self.motd:SetVisible(false)
+        self.menu:SetVisible(not self:IsSmallVersion())
+    end
+end
+
+function PANEL:AddMenuTab(title, factory)
+    table.insert(self.menu_tabs, {title, factory})
+end
+
+function PANEL:IsSmallVersion()
+    return self:GetWide() < 1250
+end
+
+function PANEL:OnScreenSizeChanged(_, _, w, h)
+    self:SetSize(w, h)
+    self:InvalidateLayout()
+    self.tab_shown = 0
+    self:ResetShownPanel(false)
+end
+
+function PANEL:PerformLayout(w, h)
+    local small_version = w < 1250
+
+    local footer_y = h - size_footer_h
+    local menu_w = not small_version and size_menu_w or (w - margin * 2)
+    local menu_h = footer_y - margin * 2
+    local motd_w = not small_version and (w - margin * 3 - menu_w) or menu_w
+    local motd_h = menu_h
+    local motd_x = not small_version and (margin * 2 + menu_w) or margin
+
+    self.motd:SetPos(motd_x, margin)
+    self.motd:SetSize(motd_w, motd_h)
+    self.about:SetPos(motd_x, margin)
+    self.about:SetSize(motd_w, motd_h)
+    self.menu:SetPos(margin, margin)
+    self.menu:SetSize(menu_w, menu_h)
+    self.footer:SetPos(0, footer_y)
+    self.footer:SetSize(w, size_footer_h)
+end
+
+function PANEL:Paint(w, h)
+    surface.SetDrawColor(color_background)
+    surface.DrawRect(0, 0, w, h)
+    Derma_DrawBackgroundBlur(self, self.shown_at - 0.5)
+end
+
+function PANEL:Think()
+end
+
+vgui.Register("ZMS.PauseMenu", PANEL, "DPanel")
+
+
+local BUTTON = {}
+
+function BUTTON:Init()
+    self:SetFont("CloseCaption_Bold")
+end
+
+function BUTTON:Paint(w, h)
+
+end
+
+function BUTTON:UpdateColours()
+    if not self:IsEnabled()   				then return self:SetTextStyleColor(color_button_disabled) end
+    if self:IsDown() or self.m_bSelected	then return self:SetTextStyleColor(color_button_click) end
+    if self.Hovered							then return self:SetTextStyleColor(color_button_hover) end
+    return self:SetTextStyleColor(color_button_normal)
+end
+
+vgui.Register("ZMS.PauseMenu.Button", BUTTON, "DButton")
+
+
+ZMS = ZMS or {}
+
+function ZMS.ClosePauseMenu()
+    if isfunction(ZMS.PauseMenu.Remove) then
+        ZMS.PauseMenu:Remove()
+    end
+    ZMS.PauseMenu = nil
+end
+
+function ZMS.OpenPauseMenu()
+    if ZMS.PauseMenu then ZMS.ClosePauseMenu() end
+    ZMS.PauseMenu = vgui.Create("ZMS.PauseMenu")
+end
+
+function ZMS.TogglePauseMenu()
+    if IsValid(ZMS.PauseMenu) then
+        ZMS.ClosePauseMenu()
+    else
+        ZMS.OpenPauseMenu()
+    end
+end
+
+hook.Add("OnPauseMenuShow", "ZMS.PauseMenuInterception", function()
+    ZMS.TogglePauseMenu()
+    return false
+end)
+
+net.Receive("ZMS.PauseMenu.RecvMotd", function()
+    local ln = net.ReadUInt(32)
+    motd_html = util.Decompress(net.ReadData(ln))
+    motd_html = resolve_html_variables(motd_html)
+
+    local r, g, b = ColorFromStr(net.ReadString())
+    color_background = Color(r, g, b, 60)
+
+    ln = net.ReadUInt(32)
+    html_variables = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+
+    if ZMS.PauseMenu and ZMS.PauseMenu.motd then
+        ZMS.PauseMenu.motd:SetHTML(motd_html)
+        ZMS.PauseMenu.footer:SetHTML(resolve_html_variables(footer_html))
+    end
+
+    if GetGlobalBool("ZMS.Debug", false) then
+        motd_html = nil
+    end
+end)
+
+function ulx.showMotdMenu()
+    motd_shown = false
+    ZMS.OpenPauseMenu()
+end
+
+-- timer.Simple(1, request_motd)
+concommand.Add("zms_motd_update", request_motd)
