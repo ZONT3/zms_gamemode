@@ -134,8 +134,19 @@ function PANEL:InitUnsafe()
     end
 
     local function prepare_html(html_pnl, html_identifier, local_html, local_vars)
+        html_pnl.pause_menu = self
         function html_pnl:OnDocumentReady()
             self:AddFunction("gmod", "openUrl", gui.OpenURL)
+            self:AddFunction("gmod", "openPage", function(page)
+                if not isnumber(page) then
+                    page = tonumber(page)
+                    if not isnumber(page) then return end
+                end
+                local btn = self.pause_menu.menu.tab_buttons and self.pause_menu.menu.tab_buttons[page] or nil
+                if btn then
+                    btn:DoClick()
+                end
+            end)
         end
         local html_string = local_html or not GetGlobalBool("ZMS.Debug", false) and html_identifier and html_pages_cache[html_identifier] or nil
         if html_string then
@@ -302,11 +313,15 @@ function ZMS.ClosePauseMenu()
         ZMS.PauseMenuPanel:Remove()
     end
     ZMS.PauseMenuPanel = nil
+    net.Start("ZMS.PauseMenu.Close")
+    net.SendToServer()
 end
 
 function ZMS.OpenPauseMenu()
     if ZMS.PauseMenuPanel then ZMS.ClosePauseMenu() end
     ZMS.PauseMenuPanel = vgui.Create("ZMS.PauseMenu")
+    net.Start("ZMS.PauseMenu.Open")
+    net.SendToServer()
 end
 
 function ZMS.TogglePauseMenu()

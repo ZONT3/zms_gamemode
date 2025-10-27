@@ -1,5 +1,6 @@
 local default_html = [[
 <html>
+    <!-- This is an example of Credits from PIVO server -->
     <head>
         <style>
             *::-webkit-scrollbar {
@@ -69,8 +70,8 @@ local default_html = [[
         {{server_dev_team}}
         <h2>Gamemode</h2>
         <ul>
-            <li><b>ZONT's Metrostroi Scripts</b>: <a href="#" onclick="gmod.openUrl('https://steamcommunity.com/id/ZONT3/')">ZONT_</a></li>
-            <li><b>Metrostroi Gamemode</b> (metrostroi_ur): <a href="#" onclick="gmod.openUrl('https://steamcommunity.com/id/ZONT3/')">ZONT_</a></li>
+            <li><b>ZONT's Metrostroi Scripts</b>: <a href="#" onclick="gmod.openUrl('https://steamcommunity.com/sharedfiles/filedetails/?id=3590604630')">ZONT_</a></li>
+            <li><b>Metrostroi Gamemode</b> (metrostroi_ur): <a href="#" onclick="gmod.openUrl('https://steamcommunity.com/sharedfiles/filedetails/?id=3590738674')">ZONT_</a></li>
         </ul>
         <h2>Аддоны на сервере</h2>
         {{server_addons}}

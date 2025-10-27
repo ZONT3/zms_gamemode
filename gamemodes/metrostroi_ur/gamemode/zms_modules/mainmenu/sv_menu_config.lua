@@ -1,5 +1,7 @@
 util.AddNetworkString("ZMS.PauseMenu.RecvPage")
 util.AddNetworkString("ZMS.PauseMenu.RequestPage")
+util.AddNetworkString("ZMS.PauseMenu.Open")
+util.AddNetworkString("ZMS.PauseMenu.Close")
 
 
 ZMS = ZMS or {}
@@ -137,5 +139,31 @@ net.Receive("ZMS.PauseMenu.RequestPage", function(_, ply)
                 cb(data)
             end
         end)
+    end
+end)
+
+
+local menu_opened = {}
+
+net.Receive("ZMS.PauseMenu.Open", function(_, ply)
+    menu_opened[ply:SteamID64()] = true
+end)
+net.Receive("ZMS.PauseMenu.Close", function(_, ply)
+    menu_opened[ply:SteamID64()] = false
+end)
+
+-- Original author: Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- Source code: https://github.com/Alexell/metrostroi_dispatcher
+timer.Create("MDispatcher.Intervals.ZMS", 5, 0, function()
+    if not MDispatcher then return end
+    local need_plys = {}
+    for k, v in ipairs(player.GetAll()) do
+        if menu_opened[v:SteamID64()] then table.insert(need_plys, v) end
+    end
+    if table.Count(need_plys) > 0 then
+        local intervals = MDispatcher.GetIntervals()
+        for k, v in ipairs(need_plys) do
+            MDispatcher.SendIntervals(v, intervals)
+        end
     end
 end)
