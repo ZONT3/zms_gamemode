@@ -58,7 +58,7 @@
 - [x] Main menu
   - [x] MOTD replacement
   - [ ] Players info *<-- current*
-  - [ ] Teleports *<-- current*
+  - [x] Teleports
   - [ ] Spawn trains on map
     - [ ] Spawn system
       - [ ] Blocking conditions
@@ -70,9 +70,9 @@
         - [ ] Spawn points restrictions
   - [ ] Spectator mode
     - [ ] Disable noclip option
-- [ ] Automatic driver rank assigning/revoking
+- [ ] Automatic driver rank assigning/revoking *<-- current*
   - [ ] Penalty system
-  - [ ] Test for assignment
+  - [ ] Test for assignment *<-- current*
     - [ ] Also for exam clearance
 - [ ] Interactive guides
 - [ ] Player driving statistics, performance points

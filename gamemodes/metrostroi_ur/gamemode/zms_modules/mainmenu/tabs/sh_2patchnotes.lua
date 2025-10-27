@@ -99,7 +99,7 @@ end)
 hook.Add("ZMS.PauseMenu.InitPatchnotes", "ZMS", function()
     -- https://currentmillis.com/
     ZMS.PauseMenu.RegisterPatchnote("ZONT's Metrostroi Addon", {
-        timestamp = 1761596810, title = "Пре-Релиз 1.0",
+        timestamp = 1761596810, title = "Релиз 1.0",
         description = "Началное пре-релизное состояние аддона",
         features = {
             "HUD",
