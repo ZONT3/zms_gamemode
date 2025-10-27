@@ -78,4 +78,4 @@ local default_html = [[
 </html>
 ]]
 
-ZMS.PauseMenu.RegisterHtmlTab("credits", "Разработчики", default_html)
+ZMS.PauseMenu.RegisterHtmlTab("credits", "Разработчики", default_html, 3)

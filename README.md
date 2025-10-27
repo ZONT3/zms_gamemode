@@ -55,10 +55,10 @@
 ## TODO
 
 - [x] Finish refactoring
-- [ ] Main menu *<-- current*
-  - [ ] MOTD replacement *<-- current*
-  - [ ] Players info
-  - [ ] Teleports
+- [x] Main menu
+  - [x] MOTD replacement
+  - [ ] Players info *<-- current*
+  - [ ] Teleports *<-- current*
   - [ ] Spawn trains on map
     - [ ] Spawn system
       - [ ] Blocking conditions

@@ -133,12 +133,13 @@ function PANEL:InitUnsafe()
         end
     end
 
-    local function prepare_html(html_pnl, html_identifier, local_html)
+    local function prepare_html(html_pnl, html_identifier, local_html, local_vars)
         function html_pnl:OnDocumentReady()
             self:AddFunction("gmod", "openUrl", gui.OpenURL)
         end
         local html_string = local_html or not GetGlobalBool("ZMS.Debug", false) and html_identifier and html_pages_cache[html_identifier] or nil
         if html_string then
+            for k, v in pairs(local_vars or {}) do html_variables[k] = v end
             html_pnl:SetHTML(resolve_html_variables(html_string))
         else
             html_pnl.html_identifier = html_identifier
@@ -170,7 +171,7 @@ function PANEL:InitUnsafe()
         local pause_menu = self.pause_menu
         local menu_tabs = pause_menu.menu_tabs
         table.sort(menu_tabs, function(a, b)
-            return not b[3] or a[3] and a[3] > b[3] or false
+            return not b[3] or a[3] and a[3] < b[3] or false
         end)
         self.tab_buttons = {}
 

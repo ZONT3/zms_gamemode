@@ -153,4 +153,4 @@ local default_html = [[
 </html>
 ]]
 
-ZMS.PauseMenu.RegisterHtmlTab("motd", "О Сервере (MOTD)", default_html)
+ZMS.PauseMenu.RegisterHtmlTab("motd", "О Сервере (MOTD)", default_html, 1)
