@@ -50,8 +50,8 @@ local patchnotes_repo = {}
 ZMS = ZMS or {}
 ZMS.PauseMenu = ZMS.PauseMenu or {}
 
-function ZMS.PauseMenu.RegisterPatchnote(name, tbl)
-    if tbl.timestamp then tbl = { tbl } end
+function ZMS.PauseMenu.RegisterPatchnote(name, ...)
+    local tbl = { ... }
     for _, pn in ipairs(tbl) do
         pn.name = name
         if pn.timestamp then
@@ -71,7 +71,7 @@ hook.Add("ZMS.PauseMenu.InitTabs", "ZMS.PauseMenu.InitTabs.Patchnote", function(
         local pn_str = cur_name ~= pn.name and { string.format("<h2>%s</h2>", pn.name) } or { }
         cur_name = pn.name
 
-        table.insert(pn_str, string.format("<h3>%s — %s</h3>", pn.title or "", os.date("%B %d %Y", pn.timestamp)))
+        table.insert(pn_str, string.format(pn.title and "<h3>%s — %s</h3>" or "<h3>%s%s</h3>", pn.title or "", os.date("%B %d %Y", pn.timestamp)))
         if pn.description then
             table.insert(pn_str, string.format("<p>%s</p>", pn.description))
         end
@@ -100,7 +100,7 @@ hook.Add("ZMS.PauseMenu.InitPatchnotes", "ZMS", function()
     -- https://currentmillis.com/
     ZMS.PauseMenu.RegisterPatchnote("ZONT's Metrostroi Addon", {
         timestamp = 1761596810, title = "Релиз 1.0",
-        description = "Началное пре-релизное состояние аддона",
+        description = "Началное релизное состояние аддона",
         features = {
             "HUD",
             "Отметки на панелях",
